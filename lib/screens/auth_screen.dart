@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -28,6 +29,10 @@ class _AuthScreenState extends State<AuthScreen> {
   bool otpSent = false;
   bool otpVerified = false;
 
+  // Resend OTP Timer
+  Timer? _resendTimer;
+  int _resendCountdown = 30;
+
   String? errorMsg;
   String? successMsg;
 
@@ -42,10 +47,31 @@ class _AuthScreenState extends State<AuthScreen> {
     scopes: ['email', 'profile'],
   );
 
+  @override
+  void dispose() {
+    _resendTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startResendTimer() {
+    _resendTimer?.cancel();
+    setState(() => _resendCountdown = 30);
+    _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) return;
+      if (_resendCountdown > 0) {
+        setState(() => _resendCountdown--);
+      } else {
+        timer.cancel();
+      }
+    });
+  }
+
   void _resetFormState() {
+    _resendTimer?.cancel();
     setState(() {
       otpSent = false;
       otpVerified = false;
+      _resendCountdown = 30;
       errorMsg = null;
       successMsg = null;
       otpController.clear();
@@ -84,6 +110,7 @@ class _AuthScreenState extends State<AuthScreen> {
         otpSent = true;
         successMsg = '6-digit verification code sent to $email via Brevo Email!';
       });
+      _startResendTimer();
     } catch (e) {
       setState(() {
         errorMsg = e.toString().replaceAll('Exception: ', '');
@@ -425,7 +452,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     ),
                   ],
 
-                  // REGISTER & FORGOT PASSWORD (3-STEP FLOW)
+                  // REGISTER & FORGOT PASSWORD (3-STEP FLOW WITH RESEND OTP TIMER)
                   if (authMode == AuthMode.register || authMode == AuthMode.forgotPassword) ...[
                     
                     // STEP 1: Enter Name & Email -> Get OTP
@@ -452,7 +479,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       ),
                     ],
 
-                    // STEP 2: Enter 6-Digit OTP Code
+                    // STEP 2: Enter 6-Digit OTP Code & Resend OTP Timer
                     if (otpSent && !otpVerified) ...[
                       _buildTextField(
                         controller: otpController,
@@ -460,7 +487,27 @@ class _AuthScreenState extends State<AuthScreen> {
                         icon: Icons.shield,
                         keyboardType: TextInputType.number,
                       ),
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 12),
+                      
+                      // Resend OTP Button with 30s Timer
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: CupertinoButton(
+                          padding: EdgeInsets.zero,
+                          onPressed: (_resendCountdown == 0 && !loading) ? _handleSendOtp : null,
+                          child: Text(
+                            _resendCountdown > 0
+                                ? 'Resend OTP in ${_resendCountdown}s'
+                                : 'Resend OTP via Email',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: _resendCountdown == 0 ? AppleTheme.appleGreen : AppleTheme.secondaryText,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
                       _buildPrimaryButton(
                         label: 'Verify OTP Code',
                         icon: CupertinoIcons.checkmark_shield_fill,

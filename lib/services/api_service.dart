@@ -6,7 +6,7 @@ import '../models/attendance_model.dart';
 class ApiService {
   static const String baseUrl = 'https://attendance-sssam.vercel.app';
 
-  // 1. Student Login
+  // 1. Student Login (Email & Password)
   static Future<UserModel> login(String email, String password) async {
     final response = await http.post(
       Uri.parse('$baseUrl/api/auth'),
@@ -22,12 +22,34 @@ class ApiService {
     if (response.statusCode == 200 && data['success'] == true && data['user'] != null) {
       return UserModel.fromJson(data['user']);
     } else {
-      throw Exception(data['error'] ?? 'Login failed. Please check credentials.');
+      throw Exception(data['error'] ?? 'Login failed. Check email or password.');
     }
   }
 
-  // 2. Student Register
-  static Future<UserModel> register(String name, String email, String password) async {
+  // 2. Send Email OTP via Brevo API for Registration
+  static Future<void> sendRegistrationOtp(String email) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/auth'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'action': 'send-otp',
+        'email': email,
+      }),
+    );
+
+    final data = jsonDecode(response.body);
+    if (response.statusCode != 200 || data['success'] != true) {
+      throw Exception(data['error'] ?? 'Failed to send OTP to email.');
+    }
+  }
+
+  // 3. Student Register (Requires valid Email OTP verification)
+  static Future<UserModel> register({
+    required String name,
+    required String email,
+    required String password,
+    required String otp,
+  }) async {
     final response = await http.post(
       Uri.parse('$baseUrl/api/auth'),
       headers: {'Content-Type': 'application/json'},
@@ -36,6 +58,7 @@ class ApiService {
         'name': name,
         'email': email,
         'password': password,
+        'otp': otp,
       }),
     );
 
@@ -43,11 +66,51 @@ class ApiService {
     if (response.statusCode == 200 && data['success'] == true && data['user'] != null) {
       return UserModel.fromJson(data['user']);
     } else {
-      throw Exception(data['error'] ?? 'Registration failed.');
+      throw Exception(data['error'] ?? 'Registration failed. Check OTP code.');
     }
   }
 
-  // 3. 1-Click Google Sign In
+  // 4. Send Email OTP for Forgot Password
+  static Future<void> sendForgotPasswordOtp(String email) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/auth'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'action': 'forgot-password',
+        'email': email,
+      }),
+    );
+
+    final data = jsonDecode(response.body);
+    if (response.statusCode != 200 || data['success'] != true) {
+      throw Exception(data['error'] ?? 'Failed to send password reset OTP.');
+    }
+  }
+
+  // 5. Reset Password with Email OTP
+  static Future<void> resetPassword({
+    required String email,
+    required String otp,
+    required String newPassword,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/auth'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'action': 'reset-password',
+        'email': email,
+        'otp': otp,
+        'newPassword': newPassword,
+      }),
+    );
+
+    final data = jsonDecode(response.body);
+    if (response.statusCode != 200 || data['success'] != true) {
+      throw Exception(data['error'] ?? 'Failed to reset password. Invalid OTP.');
+    }
+  }
+
+  // 6. 1-Click Google Sign In
   static Future<UserModel> googleLogin(String email, String name) async {
     final response = await http.post(
       Uri.parse('$baseUrl/api/auth'),
@@ -67,7 +130,7 @@ class ApiService {
     }
   }
 
-  // 4. Fetch Campus Settings (Office Location & Geofence Radius)
+  // 7. Fetch Campus Settings
   static Future<Map<String, dynamic>> fetchCampusSettings() async {
     try {
       final response = await http.get(
@@ -89,7 +152,7 @@ class ApiService {
     };
   }
 
-  // 5. Fetch Attendance History for Student
+  // 8. Fetch Attendance History
   static Future<List<AttendanceModel>> fetchAttendance(String studentId) async {
     final response = await http.get(
       Uri.parse('$baseUrl/api/attendance?studentId=$studentId'),
@@ -103,7 +166,7 @@ class ApiService {
     return [];
   }
 
-  // 6. Punch In
+  // 9. Punch In
   static Future<AttendanceModel> punchIn({
     required String studentId,
     required String studentName,
@@ -133,7 +196,7 @@ class ApiService {
     }
   }
 
-  // 7. Punch Out
+  // 10. Punch Out
   static Future<AttendanceModel> punchOut({
     required String attendanceId,
     required String notes,
@@ -156,7 +219,7 @@ class ApiService {
     }
   }
 
-  // 8. Update Live Location (Periodic background tracking while active)
+  // 11. Update Live Location
   static Future<void> updateLiveLocation({
     required String attendanceId,
     required double latitude,

@@ -162,6 +162,7 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
+  // Handle Google Sign-In
   Future<void> _handleGoogleLogin() async {
     setState(() {
       loading = true;
@@ -169,61 +170,26 @@ class _AuthScreenState extends State<AuthScreen> {
     });
 
     try {
-      String googleEmail = '';
-      String googleName = '';
-
       try {
-        final GoogleSignInAccount? account = await _googleSignIn.signIn();
-        if (account != null) {
-          googleEmail = account.email;
-          googleName = account.displayName ?? account.email.split('@')[0];
-        }
+        await _googleSignIn.signOut();
       } catch (_) {}
 
-      if (googleEmail.isEmpty) {
-        final String? input = await showCupertinoDialog<String>(
-          context: context,
-          builder: (ctx) {
-            final textCtrl = TextEditingController(text: emailController.text.trim());
-            return CupertinoAlertDialog(
-              title: const Text('Google Sign-In'),
-              content: Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: CupertinoTextField(
-                  controller: textCtrl,
-                  placeholder: 'Enter Google Email',
-                  keyboardType: TextInputType.emailAddress,
-                ),
-              ),
-              actions: [
-                CupertinoDialogAction(
-                  child: const Text('Cancel'),
-                  onPressed: () => Navigator.pop(ctx, null),
-                ),
-                CupertinoDialogAction(
-                  isDefaultAction: true,
-                  child: const Text('Sign In'),
-                  onPressed: () => Navigator.pop(ctx, textCtrl.text.trim()),
-                ),
-              ],
-            );
-          },
-        );
+      final GoogleSignInAccount? account = await _googleSignIn.signIn();
 
-        if (input == null || input.isEmpty) {
-          setState(() => loading = false);
-          return;
-        }
-        googleEmail = input;
-        googleName = input.split('@')[0];
+      if (account == null) {
+        setState(() => loading = false);
+        return;
       }
+
+      final String googleEmail = account.email;
+      final String googleName = account.displayName ?? account.email.split('@')[0];
 
       final user = await ApiService.googleLogin(googleEmail, googleName);
       await StorageService.saveUser(user);
       widget.onLoginSuccess(user);
     } catch (e) {
       setState(() {
-        errorMsg = e.toString().replaceAll('Exception: ', '');
+        errorMsg = 'Google Sign-In Error: ${e.toString().replaceAll('Exception: ', '')}';
       });
     } finally {
       if (mounted) setState(() => loading = false);

@@ -251,42 +251,38 @@ class _AuthScreenState extends State<AuthScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Apple Icon Badge
+                  // SSSAM Official Logo Badge
                   Center(
-                    child: Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [AppleTheme.appleEmerald, Color(0xFF00B0A6)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppleTheme.appleEmerald.withOpacity(0.3),
-                            blurRadius: 16,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.fingerprint,
-                        color: Colors.white,
-                        size: 30,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Image.asset(
+                        'assets/logo.png',
+                        width: 64,
+                        height: 64,
+                        fit: BoxFit.contain,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
+                  Text(
+                    'SSSAM ACADEMY',
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: AppleTheme.appleGreen,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
 
                   // Title & Subtitle
                   Text(
                     authMode == AuthMode.register
-                        ? 'Create Account'
+                        ? 'Create Student Account'
                         : authMode == AuthMode.forgotPassword
                             ? 'Forgot Password'
-                            : 'GeoTrack Student',
+                            : 'SSSAM Student Portal',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.inter(
                       fontSize: 22,

@@ -446,20 +446,21 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
       appBar: AppBar(
         title: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: const BoxDecoration(
-                color: AppleTheme.appleGreen,
-                shape: BoxShape.circle,
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.asset(
+                'assets/logo.png',
+                width: 32,
+                height: 32,
+                fit: BoxFit.contain,
               ),
-              child: const Icon(Icons.fingerprint, color: Colors.white, size: 20),
             ),
             const SizedBox(width: 10),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('GeoTrack Student', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700)),
-                Text('Attendance & GPS Portal', style: GoogleFonts.inter(fontSize: 11, color: AppleTheme.secondaryText)),
+                Text('SSSAM ACADEMY', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700)),
+                Text('Student Attendance Portal', style: GoogleFonts.inter(fontSize: 11, color: AppleTheme.secondaryText)),
               ],
             ),
           ],

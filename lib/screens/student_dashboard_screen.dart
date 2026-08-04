@@ -168,6 +168,12 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
   }
 
   Future<void> _handleFingerprintTap() async {
+    // If Offline mode & outside office radius -> Block Punch In/Out and show Animated Red Cross Alert Popup Modal (✕)!
+    if (mode == 'location' && distFromOffice != null && distFromOffice! > officeRadius) {
+      _showOutsideOfficeRangeDialog();
+      return;
+    }
+
     if (activeSession != null) {
       _showPunchOutModal();
     } else {
@@ -191,32 +197,13 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
         return;
       }
 
-      // Check geofence if offline mode
-      if (mode == 'location' && distFromOffice != null && distFromOffice! > officeRadius) {
-        showCupertinoDialog(
-          context: context,
-          builder: (ctx) => CupertinoAlertDialog(
-            title: const Text('⚠️ Outside Office Area'),
-            content: Text(
-              'You are currently ${distFromOffice!}m away from Office.\nAllowed distance is within ${officeRadius}m.\n\nPlease move closer to Office to punch in.',
-            ),
-            actions: [
-              CupertinoDialogAction(
-                child: const Text('OK'),
-                onPressed: () => Navigator.pop(ctx),
-              ),
-            ],
-          ),
-        );
-        return;
-      }
-
       setState(() => loading = true);
       try {
         final record = await ApiService.punchIn(
           studentId: widget.currentUser.studentId,
           studentName: widget.currentUser.name,
           mode: mode,
+          classMode: mode == 'online' ? 'online' : 'offline',
           latitude: currentPosition?.latitude,
           longitude: currentPosition?.longitude,
         );
@@ -249,9 +236,235 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
     }
   }
 
+  void _showOutsideOfficeRangeDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ScaleTransition(
+                scale: Tween<double>(begin: 0.95, end: 1.05).animate(_pulseController),
+                child: Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF0F0),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFFFFE0E0), width: 4),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFFF3B30).withOpacity(0.15),
+                        blurRadius: 16,
+                        spreadRadius: 4,
+                      ),
+                    ],
+                  ),
+                  child: const Center(
+                    child: Icon(CupertinoIcons.xmark, color: Color(0xFFFF3B30), size: 32),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Out of Office Range ✕',
+                style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: AppleTheme.primaryText,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Please come within office range (${officeRadius}m) to Punch In or Check Out.',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppleTheme.appleRose,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5F5F7),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppleTheme.border),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Your Distance:', style: GoogleFonts.inter(fontSize: 12, color: AppleTheme.secondaryText)),
+                        Text('${distFromOffice ?? 0}m away', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: AppleTheme.appleRose)),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Radius Limit:', style: GoogleFonts.inter(fontSize: 12, color: AppleTheme.secondaryText)),
+                        Text('${officeRadius}m', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: AppleTheme.primaryText)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _checkLocation();
+                  },
+                  icon: const Icon(CupertinoIcons.refresh, size: 16),
+                  label: const Text('Refresh GPS Location'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppleTheme.appleBlue,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    setState(() => mode = 'online');
+                  },
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppleTheme.appleBlue,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text('Switch to Online Class Mode'),
+                ),
+              ),
+              const SizedBox(height: 4),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text('Close', style: GoogleFonts.inter(color: AppleTheme.secondaryText)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showCheckoutErrorDialog(String reason) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFFFF0F0),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(CupertinoIcons.exclamationmark_triangle_fill, color: Color(0xFFFF3B30), size: 28),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'Checkout Blocked ❌',
+                style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w800, color: AppleTheme.primaryText),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                reason,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(fontSize: 13, color: AppleTheme.secondaryText, height: 1.4),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppleTheme.appleRose,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text('OK, Got It'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showFullImageDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Profile Preview', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800)),
+                  IconButton(
+                    icon: const Icon(CupertinoIcons.xmark_circle_fill, color: AppleTheme.secondaryText),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              CircleAvatar(
+                radius: 64,
+                backgroundColor: AppleTheme.appleGreen.withOpacity(0.15),
+                child: Text(
+                  widget.currentUser.name.isNotEmpty ? widget.currentUser.name[0].toUpperCase() : 'S',
+                  style: GoogleFonts.inter(fontSize: 48, fontWeight: FontWeight.w800, color: AppleTheme.appleGreen),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(widget.currentUser.name, style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700)),
+              Text(widget.currentUser.email, style: GoogleFonts.inter(fontSize: 13, color: AppleTheme.secondaryText)),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: OutlinedButton.styleFrom(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text('Close Preview'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   void _showPunchOutModal() {
     final notesController = TextEditingController();
-    String? errorText;
 
     showModalBottomSheet(
       context: context,
@@ -302,17 +515,6 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
                       ),
                     ),
                     const SizedBox(height: 16),
-                    if (errorText != null) ...[
-                      Text(
-                        errorText!,
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: AppleTheme.appleRose,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                    ],
                     Container(
                       decoration: BoxDecoration(
                         color: const Color(0xFFF9F9FB),
@@ -361,9 +563,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
                         onPressed: () async {
                           final text = notesController.text.trim();
                           if (text.length < 30) {
-                            setModalState(() {
-                              errorText = 'Study notes must be at least 30 characters!';
-                            });
+                            Navigator.pop(ctx);
+                            _showCheckoutErrorDialog('Session notes must be at least 30 characters long explaining what you studied today. (Current: ${text.length} / 30 characters)');
                             return;
                           }
 
@@ -386,19 +587,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
                             _fetchAttendanceRecords();
                           } catch (e) {
                             if (!mounted) return;
-                            showCupertinoDialog(
-                              context: context,
-                              builder: (c) => CupertinoAlertDialog(
-                                title: const Text('Error'),
-                                content: Text(e.toString().replaceAll('Exception: ', '')),
-                                actions: [
-                                  CupertinoDialogAction(
-                                    child: const Text('OK'),
-                                    onPressed: () => Navigator.pop(c),
-                                  ),
-                                ],
-                              ),
-                            );
+                            _showCheckoutErrorDialog(e.toString().replaceAll('Exception: ', ''));
                           } finally {
                             if (mounted) setState(() => loading = false);
                           }
@@ -493,17 +682,20 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
                 ),
                 child: Row(
                   children: [
-                    CircleAvatar(
-                      radius: 26,
-                      backgroundColor: AppleTheme.appleGreen.withOpacity(0.12),
-                      child: Text(
-                        widget.currentUser.name.isNotEmpty
-                            ? widget.currentUser.name[0].toUpperCase()
-                            : 'S',
-                        style: GoogleFonts.inter(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w700,
-                          color: AppleTheme.appleGreen,
+                    GestureDetector(
+                      onTap: _showFullImageDialog,
+                      child: CircleAvatar(
+                        radius: 26,
+                        backgroundColor: AppleTheme.appleGreen.withOpacity(0.12),
+                        child: Text(
+                          widget.currentUser.name.isNotEmpty
+                              ? widget.currentUser.name[0].toUpperCase()
+                              : 'S',
+                          style: GoogleFonts.inter(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                            color: AppleTheme.appleGreen,
+                          ),
                         ),
                       ),
                     ),
@@ -639,7 +831,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
                 const SizedBox(height: 16),
               ],
 
-              // 3. Live Geofence GPS Card
+              // 3. Live Geofence GPS Card / Online Mode Status Pill
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -648,10 +840,37 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
                   border: Border.all(color: AppleTheme.border),
                   boxShadow: AppleTheme.softShadow,
                 ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                child: mode == 'online'
+                    ? Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE8F2FF),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: AppleTheme.appleBlue.withOpacity(0.2)),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(CupertinoIcons.info_circle_fill, color: AppleTheme.appleBlue, size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'ℹ️ Online Class: Attendance will be marked as Online',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppleTheme.appleBlue,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Row(
                           children: [
@@ -945,11 +1164,15 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
                                 ),
                               ),
                               Text(
-                                'Mode: ${item.mode.toUpperCase()}',
+                                item.classMode == 'online' || item.mode == 'online'
+                                    ? '💻 ONLINE'
+                                    : '🏫 OFFLINE',
                                 style: GoogleFonts.inter(
                                   fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppleTheme.appleBlue,
+                                  fontWeight: FontWeight.w700,
+                                  color: item.classMode == 'online' || item.mode == 'online'
+                                      ? AppleTheme.appleBlue
+                                      : AppleTheme.appleGreen,
                                 ),
                               ),
                             ],

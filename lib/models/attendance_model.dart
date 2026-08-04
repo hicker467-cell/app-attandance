@@ -38,6 +38,7 @@ class AttendanceModel {
   final DateTime? punchOutTime;
   final int durationMinutes;
   final String mode; // 'location' | 'online'
+  final String? classMode; // 'offline' | 'online'
   final LocationData? locationData;
   final String? notes;
   final String? audioNote;
@@ -53,6 +54,7 @@ class AttendanceModel {
     this.punchOutTime,
     this.durationMinutes = 0,
     required this.mode,
+    this.classMode,
     this.locationData,
     this.notes,
     this.audioNote,
@@ -61,19 +63,20 @@ class AttendanceModel {
 
   factory AttendanceModel.fromJson(Map<String, dynamic> json) {
     return AttendanceModel(
-      id: json['_id'] ?? json['id'] ?? '',
+      id: json['id'] ?? json['_id'] ?? '',
       studentId: json['studentId'] ?? '',
       studentName: json['studentName'] ?? '',
       date: json['date'] ?? '',
       month: json['month'] ?? '',
       punchInTime: DateTime.parse(json['punchInTime'] ?? DateTime.now().toIso8601String()),
       punchOutTime: json['punchOutTime'] != null ? DateTime.parse(json['punchOutTime']) : null,
-      durationMinutes: json['durationMinutes'] ?? 0,
+      durationMinutes: (json['durationMinutes'] as num?)?.toInt() ?? 0,
       mode: json['mode'] ?? 'location',
+      classMode: json['classMode'] ?? (json['mode'] == 'online' ? 'online' : 'offline'),
       locationData: LocationData.fromJson(json['locationData']),
       notes: json['notes'],
       audioNote: json['audioNote'],
-      status: json['status'] ?? 'completed',
+      status: json['status'] ?? 'active',
     );
   }
 }

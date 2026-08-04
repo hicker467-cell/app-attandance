@@ -171,6 +171,7 @@ class ApiService {
     required String studentId,
     required String studentName,
     required String mode,
+    String? classMode,
     double? latitude,
     double? longitude,
   }) async {
@@ -182,6 +183,7 @@ class ApiService {
         'studentId': studentId,
         'studentName': studentName,
         'mode': mode,
+        'classMode': classMode ?? (mode == 'online' ? 'online' : 'offline'),
         'location': (latitude != null && longitude != null)
             ? {'latitude': latitude, 'longitude': longitude}
             : null,

@@ -899,6 +899,29 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
                         ),
                       ),
                     ),
+                    if (notesController.text.trim().length >= 30) ...[
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE8F8EE),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppleTheme.appleGreen.withOpacity(0.3)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Text('🎉', style: TextStyle(fontSize: 16)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                '30-Character Activity Milestone Unlocked! Ready to Checkout.',
+                                style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: AppleTheme.appleGreen),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 20),
                     SizedBox(
                       height: 50,
@@ -1024,6 +1047,51 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // 👋 Dynamic Welcome Greeting Banner
+              Container(
+                margin: const EdgeInsets.only(bottom: 14),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF0071E3), Color(0xFF34C759)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: AppleTheme.softShadow,
+                ),
+                child: Row(
+                  children: [
+                    const Text('👋', style: TextStyle(fontSize: 24)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Welcome Back, ${currentUserState.name}!',
+                            style: GoogleFonts.inter(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            "Ready for today's session? Verify location & punch in below.",
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white.withOpacity(0.95),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
               // 1. Student Profile Header Card
               Container(
                 padding: const EdgeInsets.all(20),

@@ -1537,6 +1537,63 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
                   ),
                 ],
               ),
+              // ⭐ LEAVE A STUDENT REVIEW BANNER
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: () async {
+                  final url = Uri.parse('https://sudhirkr85.github.io/review/');
+                  if (await canLaunchUrl(url)) {
+                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFFFF8E7), Color(0xFFFFE8B3)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFFFF9500).withOpacity(0.4)),
+                    boxShadow: AppleTheme.softShadow,
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFFF9500),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(CupertinoIcons.star_fill, color: Colors.white, size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text('Leave Student Review', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: AppleTheme.primaryText)),
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(color: const Color(0xFFFF9500), borderRadius: BorderRadius.circular(10)),
+                                  child: Text('⭐ 5.0 Star', style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white)),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text('Share your feedback directly on our review portal', style: GoogleFonts.inter(fontSize: 11, color: AppleTheme.secondaryText)),
+                          ],
+                        ),
+                      ),
+                      const Icon(CupertinoIcons.arrow_up_right, color: Color(0xFFFF9500), size: 16),
+                    ],
+                  ),
+                ),
+              ),
               const SizedBox(height: 12),
 
               // 5b. Quick Links Row (WhatsApp & Coding With Sudhir YouTube)
@@ -1551,7 +1608,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
                         }
                       },
                       child: Container(
-                        padding: const EdgeInsets.all(14),
+                        padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(16),
@@ -1568,13 +1625,13 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
                               ),
                               child: const Icon(CupertinoIcons.chat_bubble_text_fill, color: AppleTheme.appleGreen, size: 18),
                             ),
-                            const SizedBox(width: 10),
+                            const SizedBox(width: 8),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('WhatsApp Group', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: AppleTheme.primaryText)),
-                                  Text('Placement Group', style: GoogleFonts.inter(fontSize: 10, color: AppleTheme.secondaryText)),
+                                  Text('WhatsApp', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: AppleTheme.primaryText)),
+                                  Text('Placement', style: GoogleFonts.inter(fontSize: 10, color: AppleTheme.secondaryText)),
                                 ],
                               ),
                             ),
@@ -1583,7 +1640,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: GestureDetector(
                       onTap: () async {
@@ -1593,7 +1650,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
                         }
                       },
                       child: Container(
-                        padding: const EdgeInsets.all(14),
+                        padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(16),
@@ -1610,13 +1667,103 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
                               ),
                               child: const Icon(CupertinoIcons.play_rectangle_fill, color: Color(0xFFFF0000), size: 18),
                             ),
-                            const SizedBox(width: 10),
+                            const SizedBox(width: 8),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('CodingWithSudhir', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: AppleTheme.primaryText)),
-                                  Text('Official YouTube', style: GoogleFonts.inter(fontSize: 10, color: AppleTheme.secondaryText)),
+                                  Text('YouTube', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: AppleTheme.primaryText)),
+                                  Text('CodingWithSudhir', style: GoogleFonts.inter(fontSize: 10, color: AppleTheme.secondaryText)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              // 5c. Social Hub Row (Instagram & LinkedIn)
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () async {
+                        final url = Uri.parse('https://www.instagram.com/sssamacademy');
+                        if (await canLaunchUrl(url)) {
+                          await launchUrl(url, mode: LaunchMode.externalApplication);
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppleTheme.border),
+                          boxShadow: AppleTheme.softShadow,
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFF0F6),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(CupertinoIcons.camera_fill, color: Color(0xFFE1306C), size: 18),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Instagram', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: AppleTheme.primaryText)),
+                                  Text('@sssamacademy', style: GoogleFonts.inter(fontSize: 10, color: AppleTheme.secondaryText)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () async {
+                        final url = Uri.parse('https://www.linkedin.com/company/sssamacademy');
+                        if (await canLaunchUrl(url)) {
+                          await launchUrl(url, mode: LaunchMode.externalApplication);
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppleTheme.border),
+                          boxShadow: AppleTheme.softShadow,
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE8F2FF),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(CupertinoIcons.briefcase_fill, color: Color(0xFF0A66C2), size: 18),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('LinkedIn', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: AppleTheme.primaryText)),
+                                  Text('SSSAM Academy', style: GoogleFonts.inter(fontSize: 10, color: AppleTheme.secondaryText)),
                                 ],
                               ),
                             ),

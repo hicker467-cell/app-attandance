@@ -406,7 +406,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text('High Authority Escalation', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800)),
-                            Text('Priority Line (9102130956)', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: AppleTheme.appleRose)),
+                            Text('Priority Escalation Desk', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: AppleTheme.appleRose)),
                           ],
                         ),
                       ),
@@ -425,7 +425,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
                       border: Border.all(color: const Color(0xFFFF3B30).withOpacity(0.3)),
                     ),
                     child: Text(
-                      '⚠️ IMPORTANT: Kripya is number par tabhi contact karein agar aapka issue 9217031899 (Primary Help Line) par solve NAHI hua ho. Ye High Authority line hai.',
+                      '⚠️ IMPORTANT: Please contact High Authority ONLY if your issue was NOT resolved after discussing with Primary Support.',
                       style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppleTheme.primaryText, height: 1.3),
                     ),
                   ),
@@ -434,26 +434,26 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
                     Text(errorMsg!, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: AppleTheme.appleRose)),
                     const SizedBox(height: 8),
                   ],
-                  Text('1. Kya issue tha? *', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700)),
+                  Text('1. Describe your attendance or system issue *', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 4),
                   TextField(
                     controller: issueController,
                     maxLines: 2,
                     decoration: InputDecoration(
-                      hintText: 'Describe your issue details...',
+                      hintText: 'Describe issue details...',
                       filled: true,
                       fillColor: const Color(0xFFF5F5F7),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                     ),
                   ),
                   const SizedBox(height: 10),
-                  Text('2. 92 wale number par kya discuss hua? *', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700)),
+                  Text('2. What was discussed with Primary Support? *', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 4),
                   TextField(
                     controller: discussionController,
                     maxLines: 2,
                     decoration: InputDecoration(
-                      hintText: 'Describe response from 92 line...',
+                      hintText: 'Describe response from Primary Support...',
                       filled: true,
                       fillColor: const Color(0xFFF5F5F7),
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
@@ -470,7 +470,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
                           setDialogState(() => errorMsg = 'Please fill in both fields before proceeding.');
                           return;
                         }
-                        final text = '🚨 High Authority Escalation Ticket:\n👤 Name: ${currentUserState.name}\n📞 Contact: ${currentUserState.phone}\n❗ Issue Details: $issue\n💬 Discussed on 92 Line: $disc';
+                        final text = '🚨 High Authority Escalation Ticket:\n👤 Name: ${currentUserState.name}\n📞 Contact: ${currentUserState.phone}\n❗ Issue Details: $issue\n💬 Discussion with Primary Support: $disc';
                         final url = Uri.parse('https://wa.me/919102130956?text=${Uri.encodeComponent(text)}');
                         Navigator.pop(ctx);
                         if (await canLaunchUrl(url)) {
@@ -509,7 +509,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('🎧 Student Support Lines', style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w800)),
+                  Text('🎧 Help & Support Center', style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w800)),
                   IconButton(
                     icon: const Icon(CupertinoIcons.xmark_circle_fill, color: AppleTheme.secondaryText),
                     onPressed: () => Navigator.pop(ctx),
@@ -527,7 +527,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
                   }
                 },
                 icon: const Icon(CupertinoIcons.phone_fill, size: 18),
-                label: const Text('🟢 Primary Help & Support (92 Line)'),
+                label: const Text('🟢 Primary Support Line'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppleTheme.appleGreen,
                   foregroundColor: Colors.white,
@@ -542,7 +542,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
                   _showHighAuthorityEscalationDialog();
                 },
                 icon: const Icon(CupertinoIcons.exclamationmark_shield_fill, color: AppleTheme.appleRose, size: 18),
-                label: Text('🚨 Priority Escalation Line (91 Line)', style: GoogleFonts.inter(color: AppleTheme.appleRose, fontWeight: FontWeight.w700)),
+                label: Text('🚨 Priority Escalation Line', style: GoogleFonts.inter(color: AppleTheme.appleRose, fontWeight: FontWeight.w700)),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   side: const BorderSide(color: AppleTheme.appleRose),

@@ -86,6 +86,18 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
     await _checkLocation();
   }
 
+  Future<void> _launchURL(String urlString) async {
+    try {
+      final Uri uri = Uri.parse(urlString);
+      bool launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!launched) {
+        await launchUrl(uri, mode: LaunchMode.platformDefault);
+      }
+    } catch (e) {
+      debugPrint('Error launching URL $urlString: $e');
+    }
+  }
+
   Future<void> _fetchOfficeSettings() async {
     final settings = await ApiService.fetchCampusSettings();
     if (!mounted) return;
@@ -1596,12 +1608,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
         // ⭐ LEAVE A STUDENT REVIEW BANNER
         const SizedBox(height: 12),
         GestureDetector(
-          onTap: () async {
-            final url = Uri.parse('https://sudhirkr85.github.io/review/');
-            if (await canLaunchUrl(url)) {
-              await launchUrl(url, mode: LaunchMode.externalApplication);
-            }
-          },
+          onTap: () => _launchURL('https://sudhirkr85.github.io/review/'),
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -1657,12 +1664,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
           children: [
             Expanded(
               child: GestureDetector(
-                onTap: () async {
-                  final url = Uri.parse('https://chat.whatsapp.com/IoJv1FFdbNNGsSUN52ZZdS');
-                  if (await canLaunchUrl(url)) {
-                    await launchUrl(url, mode: LaunchMode.externalApplication);
-                  }
-                },
+                onTap: () => _launchURL('https://chat.whatsapp.com/IoJv1FFdbNNGsSUN52ZZdS'),
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -1699,12 +1701,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
             const SizedBox(width: 10),
             Expanded(
               child: GestureDetector(
-                onTap: () async {
-                  final url = Uri.parse('https://www.youtube.com/@CodingWithSudhir');
-                  if (await canLaunchUrl(url)) {
-                    await launchUrl(url, mode: LaunchMode.externalApplication);
-                  }
-                },
+                onTap: () => _launchURL('https://www.youtube.com/@CodingWithSudhir'),
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -1747,12 +1744,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
           children: [
             Expanded(
               child: GestureDetector(
-                onTap: () async {
-                  final url = Uri.parse('https://www.instagram.com/sssamacademy');
-                  if (await canLaunchUrl(url)) {
-                    await launchUrl(url, mode: LaunchMode.externalApplication);
-                  }
-                },
+                onTap: () => _launchURL('https://www.instagram.com/sssamacademy'),
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -1789,12 +1781,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
             const SizedBox(width: 10),
             Expanded(
               child: GestureDetector(
-                onTap: () async {
-                  final url = Uri.parse('https://www.linkedin.com/company/sssamacademy');
-                  if (await canLaunchUrl(url)) {
-                    await launchUrl(url, mode: LaunchMode.externalApplication);
-                  }
-                },
+                onTap: () => _launchURL('https://www.linkedin.com/company/sssamacademy'),
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -1935,9 +1922,13 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
             _buildSmallMetricCard('AVG HOURS / DAY', '${avgHours.toStringAsFixed(1)} Hrs', const Color(0xFFFF9500)),
           ],
         ),
+        const SizedBox(height: 16),
+
+        // 3. Monthly Visual Calendar Grid (Tap Date for details)
+        _buildMonthlyCalendarGrid(),
         const SizedBox(height: 20),
 
-        // 3. Attendance History Logs List
+        // 4. Attendance History Logs List
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -2033,6 +2024,214 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
             },
           ),
       ],
+    );
+  }
+
+  Widget _buildMonthlyCalendarGrid() {
+    final int daysInMonth = DateTime(_calendarSelectedMonth.year, _calendarSelectedMonth.month + 1, 0).day;
+    final int firstWeekday = DateTime(_calendarSelectedMonth.year, _calendarSelectedMonth.month, 1).weekday;
+    final int leadingEmpty = firstWeekday - 1;
+
+    final Map<String, List<AttendanceModel>> dateRecordMap = {};
+    for (var r in records) {
+      final key = DateFormat('yyyy-MM-dd').format(r.punchInTime);
+      dateRecordMap.putIfAbsent(key, () => []).add(r);
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppleTheme.border),
+        boxShadow: AppleTheme.softShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Monthly Attendance Calendar', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: AppleTheme.primaryText)),
+              Text('👉 Tap date for details', style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: AppleTheme.appleBlue)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day) {
+              return Expanded(
+                child: Center(
+                  child: Text(day, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: AppleTheme.secondaryText)),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 8),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: leadingEmpty + daysInMonth,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 7,
+              crossAxisSpacing: 6,
+              mainAxisSpacing: 6,
+              childAspectRatio: 1.0,
+            ),
+            itemBuilder: (context, index) {
+              if (index < leadingEmpty) {
+                return const SizedBox.shrink();
+              }
+              final int dayNum = index - leadingEmpty + 1;
+              final DateTime dateObj = DateTime(_calendarSelectedMonth.year, _calendarSelectedMonth.month, dayNum);
+              final String dateKey = DateFormat('yyyy-MM-dd').format(dateObj);
+              final dayRecords = dateRecordMap[dateKey] ?? [];
+              final bool isPresent = dayRecords.isNotEmpty;
+              final bool isToday = _isToday(dateObj);
+
+              return GestureDetector(
+                onTap: () {
+                  _showDateDetailModal(dateObj, dayRecords);
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: isPresent ? const Color(0xFFE8F8EE) : (isToday ? const Color(0xFFE8F2FF) : const Color(0xFFF9F9FB)),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: isPresent
+                          ? const Color(0xFF34C759).withOpacity(0.5)
+                          : (isToday ? AppleTheme.appleBlue : AppleTheme.border),
+                      width: isToday ? 1.5 : 1.0,
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '$dayNum',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: isPresent ? AppleTheme.appleGreen : AppleTheme.primaryText,
+                        ),
+                      ),
+                      if (isPresent)
+                        FittedBox(
+                          child: Text(
+                            '${dayRecords.length} sess',
+                            style: GoogleFonts.inter(fontSize: 8, fontWeight: FontWeight.w700, color: AppleTheme.appleGreen),
+                          ),
+                        )
+                      else if (isToday)
+                        FittedBox(
+                          child: Text(
+                            'Today',
+                            style: GoogleFonts.inter(fontSize: 8, fontWeight: FontWeight.w700, color: AppleTheme.appleBlue),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDateDetailModal(DateTime dateObj, List<AttendanceModel> dayRecords) {
+    final String formattedFullDate = DateFormat('EEEE, d MMMM yyyy').format(dateObj);
+    final bool isPresent = dayRecords.isNotEmpty;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(width: 36, height: 4, decoration: BoxDecoration(color: const Color(0xFFE5E5EA), borderRadius: BorderRadius.circular(2))),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(formattedFullDate, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: AppleTheme.primaryText)),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isPresent ? const Color(0xFFE8F8EE) : const Color(0xFFFFF0F0),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      isPresent ? 'PRESENT' : 'NO SESSION',
+                      style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: isPresent ? AppleTheme.appleGreen : const Color(0xFFFF3B30)),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              if (!isPresent)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  child: Center(
+                    child: Text('No attendance recorded for this date.', style: GoogleFonts.inter(fontSize: 13, color: AppleTheme.secondaryText)),
+                  ),
+                )
+              else ...[
+                Text('Sessions Recorded (${dayRecords.length}):', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: AppleTheme.primaryText)),
+                const SizedBox(height: 10),
+                ...dayRecords.map((item) {
+                  final String inTime = DateFormat('hh:mm a').format(item.punchInTime);
+                  final String outTime = item.punchOutTime != null
+                      ? DateFormat('hh:mm a').format(item.punchOutTime!)
+                      : 'Active Session';
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF9F9FB),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppleTheme.border),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('In: $inTime   ➔   Out: $outTime', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: AppleTheme.primaryText)),
+                            Text('${item.durationMinutes} mins', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: AppleTheme.appleBlue)),
+                          ],
+                        ),
+                        if (item.notes != null && item.notes!.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text('Notes: ${item.notes}', style: GoogleFonts.inter(fontSize: 11, color: AppleTheme.secondaryText)),
+                        ],
+                      ],
+                    ),
+                  );
+                }),
+              ],
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
     );
   }
 

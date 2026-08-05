@@ -85,6 +85,47 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
     });
   }
 
+  String get todayFirstCheckInStr {
+    final now = DateTime.now();
+    final todayFormatted = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+    
+    if (activeSession != null && activeSession!.punchInTime.startsWith(todayFormatted)) {
+      try {
+        final dt = DateTime.parse(activeSession!.punchInTime).toLocal();
+        final period = dt.hour >= 12 ? 'PM' : 'AM';
+        final hour = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+        return "${hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')} $period";
+      } catch (_) {}
+    }
+    
+    final todayList = records.where((r) => r.date == todayFormatted || r.punchInTime.startsWith(todayFormatted)).toList();
+    if (todayList.isNotEmpty && todayList.first.punchInTime.isNotEmpty) {
+      try {
+        final dt = DateTime.parse(todayList.first.punchInTime).toLocal();
+        final period = dt.hour >= 12 ? 'PM' : 'AM';
+        final hour = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+        return "${hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')} $period";
+      } catch (_) {}
+    }
+    return '--:--';
+  }
+
+  String get todayLastCheckOutStr {
+    final now = DateTime.now();
+    final todayFormatted = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+    
+    final todayCompleted = records.where((r) => (r.date == todayFormatted || r.punchInTime.startsWith(todayFormatted)) && r.punchOutTime != null && r.punchOutTime!.isNotEmpty).toList();
+    if (todayCompleted.isNotEmpty) {
+      try {
+        final dt = DateTime.parse(todayCompleted.last.punchOutTime!).toLocal();
+        final period = dt.hour >= 12 ? 'PM' : 'AM';
+        final hour = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+        return "${hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')} $period";
+      } catch (_) {}
+    }
+    return '--:--';
+  }
+
   Future<void> _fetchAttendanceRecords() async {
     if (!mounted) return;
     setState(() => refreshingLogs = true);
@@ -1479,21 +1520,19 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
                 children: [
                   Expanded(
                     child: _buildKpiCard(
-                      title: 'Total Sessions',
-                      value: '${records.length}',
-                      icon: CupertinoIcons.calendar_badge_plus,
-                      iconColor: AppleTheme.appleBlue,
+                      title: "Today's Check-In",
+                      value: todayFirstCheckInStr,
+                      icon: CupertinoIcons.clock,
+                      iconColor: AppleTheme.appleGreen,
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: _buildKpiCard(
-                      title: 'Current Mode',
-                      value: isPunchedIn
-                          ? activeSession!.mode.toUpperCase()
-                          : mode.toUpperCase(),
-                      icon: CupertinoIcons.location_circle,
-                      iconColor: AppleTheme.appleGreen,
+                      title: "Today's Check-Out",
+                      value: todayLastCheckOutStr,
+                      icon: CupertinoIcons.clock_fill,
+                      iconColor: AppleTheme.appleBlue,
                     ),
                   ),
                 ],

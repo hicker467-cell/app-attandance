@@ -85,27 +85,29 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
     });
   }
 
+  String _formatTime(DateTime dt) {
+    final local = dt.toLocal();
+    final period = local.hour >= 12 ? 'PM' : 'AM';
+    final hour = local.hour % 12 == 0 ? 12 : local.hour % 12;
+    return "${hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')} $period";
+  }
+
+  bool _isToday(DateTime dt) {
+    final now = DateTime.now();
+    return dt.year == now.year && dt.month == now.month && dt.day == now.day;
+  }
+
   String get todayFirstCheckInStr {
     final now = DateTime.now();
     final todayFormatted = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
     
-    if (activeSession != null && activeSession!.punchInTime.startsWith(todayFormatted)) {
-      try {
-        final dt = DateTime.parse(activeSession!.punchInTime).toLocal();
-        final period = dt.hour >= 12 ? 'PM' : 'AM';
-        final hour = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
-        return "${hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')} $period";
-      } catch (_) {}
+    if (activeSession != null && (_isToday(activeSession!.punchInTime) || activeSession!.date == todayFormatted)) {
+      return _formatTime(activeSession!.punchInTime);
     }
     
-    final todayList = records.where((r) => r.date == todayFormatted || r.punchInTime.startsWith(todayFormatted)).toList();
-    if (todayList.isNotEmpty && todayList.first.punchInTime.isNotEmpty) {
-      try {
-        final dt = DateTime.parse(todayList.first.punchInTime).toLocal();
-        final period = dt.hour >= 12 ? 'PM' : 'AM';
-        final hour = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
-        return "${hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')} $period";
-      } catch (_) {}
+    final todayList = records.where((r) => r.date == todayFormatted || _isToday(r.punchInTime)).toList();
+    if (todayList.isNotEmpty) {
+      return _formatTime(todayList.first.punchInTime);
     }
     return '--:--';
   }
@@ -114,14 +116,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
     final now = DateTime.now();
     final todayFormatted = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
     
-    final todayCompleted = records.where((r) => (r.date == todayFormatted || r.punchInTime.startsWith(todayFormatted)) && r.punchOutTime != null && r.punchOutTime!.isNotEmpty).toList();
+    final todayCompleted = records.where((r) => (r.date == todayFormatted || _isToday(r.punchInTime)) && r.punchOutTime != null).toList();
     if (todayCompleted.isNotEmpty) {
-      try {
-        final dt = DateTime.parse(todayCompleted.last.punchOutTime!).toLocal();
-        final period = dt.hour >= 12 ? 'PM' : 'AM';
-        final hour = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
-        return "${hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')} $period";
-      } catch (_) {}
+      return _formatTime(todayCompleted.last.punchOutTime!);
     }
     return '--:--';
   }

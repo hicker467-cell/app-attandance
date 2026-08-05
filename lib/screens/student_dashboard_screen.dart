@@ -28,6 +28,7 @@ class StudentDashboardScreen extends StatefulWidget {
 class _StudentDashboardScreenState extends State<StudentDashboardScreen> with SingleTickerProviderStateMixin {
   late UserModel currentUserState;
   String mode = 'location'; // 'location' (offline) | 'online'
+  int _selectedTabIndex = 0;
   Position? currentPosition;
   int? distFromOffice;
   bool refreshingGps = false;
@@ -1060,19 +1061,9 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
         ),
         actions: [
           IconButton(
-            icon: const Icon(CupertinoIcons.pencil_circle_fill, color: AppleTheme.appleBlue),
-            onPressed: _showEditProfileDialog,
-            tooltip: 'Edit Profile',
-          ),
-          IconButton(
             icon: const Icon(CupertinoIcons.phone_circle_fill, color: AppleTheme.appleGreen),
             onPressed: _showSupportOptionsDialog,
             tooltip: 'Support Lines',
-          ),
-          IconButton(
-            icon: const Icon(CupertinoIcons.square_arrow_right, color: AppleTheme.appleRose),
-            onPressed: widget.onLogout,
-            tooltip: 'Sign Out',
           ),
         ],
       ),
@@ -1082,277 +1073,334 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+          child: _buildSelectedTabContent(),
+        ),
+      ),
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          border: Border(top: BorderSide(color: Color(0xFFE5E5EA), width: 1)),
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _selectedTabIndex,
+          onTap: (index) => setState(() => _selectedTabIndex = index),
+          type: BottomNavigationBarType.fixed,
+          selectedItemColor: AppleTheme.appleGreen,
+          unselectedItemColor: AppleTheme.secondaryText,
+          backgroundColor: Colors.white,
+          elevation: 0,
+          selectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 11),
+          unselectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 11),
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.hand_point_right_fill),
+              label: 'Punch',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.calendar),
+              label: 'Calendar',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.person_fill),
+              label: 'Profile',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.phone_fill),
+              label: 'Support',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSelectedTabContent() {
+    switch (_selectedTabIndex) {
+      case 1:
+        return _buildCalendarTabContent();
+      case 2:
+        return _buildProfileTabContent();
+      case 3:
+        return _buildSupportTabContent();
+      case 0:
+      default:
+        return _buildPunchTabContent();
+    }
+  }
+
+  // TAB 0: PUNCH CONSOLE
+  Widget _buildPunchTabContent() {
+    final bool isPunchedIn = activeSession != null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // 👋 Dynamic Welcome Greeting Banner
+        Container(
+          margin: const EdgeInsets.only(bottom: 14),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF0071E3), Color(0xFF34C759)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: AppleTheme.softShadow,
+          ),
+          child: Row(
             children: [
-              // 👋 Dynamic Welcome Greeting Banner
-              Container(
-                margin: const EdgeInsets.only(bottom: 14),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF0071E3), Color(0xFF34C759)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: AppleTheme.softShadow,
-                ),
-                child: Row(
+              const Text('👋', style: TextStyle(fontSize: 24)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('👋', style: TextStyle(fontSize: 24)),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Welcome Back, ${currentUserState.name}!',
-                            style: GoogleFonts.inter(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
+                    Text(
+                      'Welcome Back, ${currentUserState.name}!',
+                      style: GoogleFonts.inter(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      "Ready for today's session? Verify location & punch in below.",
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white.withOpacity(0.95),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // 1. Student Profile Header Card
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppleTheme.border),
+            boxShadow: AppleTheme.softShadow,
+          ),
+          child: Row(
+            children: [
+              GestureDetector(
+                onTap: _showFullImageDialog,
+                child: CircleAvatar(
+                  radius: 26,
+                  backgroundColor: AppleTheme.appleGreen.withOpacity(0.12),
+                  child: Text(
+                    currentUserState.name.isNotEmpty
+                        ? currentUserState.name[0].toUpperCase()
+                        : 'S',
+                    style: GoogleFonts.inter(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      color: AppleTheme.appleGreen,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          currentUserState.name,
+                          style: GoogleFonts.inter(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: AppleTheme.primaryText,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: _showEditProfileDialog,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppleTheme.appleBlue.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '✏️ Edit',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: AppleTheme.appleBlue,
+                              ),
                             ),
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            "Ready for today's session? Verify location & punch in below.",
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF2F2F7),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            currentUserState.studentId,
                             style: GoogleFonts.inter(
                               fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.white.withOpacity(0.95),
+                              fontWeight: FontWeight.w700,
+                              color: AppleTheme.appleGreen,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            currentUserState.email,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: AppleTheme.secondaryText,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // 2. Attendance Mode Segmented Control
+        if (!isPunchedIn) ...[
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEFEFF4),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => mode = 'location'),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: mode == 'location' ? Colors.white : Colors.transparent,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: mode == 'location' ? AppleTheme.softShadow : null,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            CupertinoIcons.location_fill,
+                            size: 16,
+                            color: mode == 'location' ? AppleTheme.appleGreen : AppleTheme.secondaryText,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Offline (Location)',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: mode == 'location' ? AppleTheme.primaryText : AppleTheme.secondaryText,
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
-
-              // 1. Student Profile Header Card
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: AppleTheme.border),
-                  boxShadow: AppleTheme.softShadow,
-                ),
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: _showFullImageDialog,
-                      child: CircleAvatar(
-                        radius: 26,
-                        backgroundColor: AppleTheme.appleGreen.withOpacity(0.12),
-                        child: Text(
-                          currentUserState.name.isNotEmpty
-                              ? currentUserState.name[0].toUpperCase()
-                              : 'S',
-                          style: GoogleFonts.inter(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
-                            color: AppleTheme.appleGreen,
-                          ),
-                        ),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => mode = 'online'),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: mode == 'online' ? Colors.white : Colors.transparent,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: mode == 'online' ? AppleTheme.softShadow : null,
                       ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                currentUserState.name,
-                                style: GoogleFonts.inter(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppleTheme.primaryText,
-                                ),
-                              ),
-                              GestureDetector(
-                                onTap: _showEditProfileDialog,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: AppleTheme.appleBlue.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    '✏️ Edit',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppleTheme.appleBlue,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
+                          Icon(
+                            CupertinoIcons.globe,
+                            size: 16,
+                            color: mode == 'online' ? AppleTheme.appleIndigo : AppleTheme.secondaryText,
                           ),
-                          const SizedBox(height: 2),
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF2F2F7),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  currentUserState.studentId,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppleTheme.appleGreen,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  currentUserState.email,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 12,
-                                    color: AppleTheme.secondaryText,
-                                  ),
-                                ),
-                              ),
-                            ],
+                          const SizedBox(width: 6),
+                          Text(
+                            'Online',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: mode == 'online' ? AppleTheme.primaryText : AppleTheme.secondaryText,
+                            ),
                           ),
                         ],
                       ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
 
-              // 2. Attendance Mode Segmented Control
-              if (!isPunchedIn) ...[
-                Container(
-                  padding: const EdgeInsets.all(4),
+        // 3. Live Geofence GPS Card / Online Mode Status Pill
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppleTheme.border),
+            boxShadow: AppleTheme.softShadow,
+          ),
+          child: mode == 'online'
+              ? Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEFEFF4),
-                    borderRadius: BorderRadius.circular(16),
+                    color: const Color(0xFFE8F2FF),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppleTheme.appleBlue.withOpacity(0.2)),
                   ),
                   child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
+                      const Icon(CupertinoIcons.info_circle_fill, color: AppleTheme.appleBlue, size: 18),
+                      const SizedBox(width: 8),
                       Expanded(
-                        child: GestureDetector(
-                          onTap: () => setState(() => mode = 'location'),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            decoration: BoxDecoration(
-                              color: mode == 'location' ? Colors.white : Colors.transparent,
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: mode == 'location' ? AppleTheme.softShadow : null,
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  CupertinoIcons.location_fill,
-                                  size: 16,
-                                  color: mode == 'location' ? AppleTheme.appleGreen : AppleTheme.secondaryText,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'Offline (Location)',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                    color: mode == 'location' ? AppleTheme.primaryText : AppleTheme.secondaryText,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => setState(() => mode = 'online'),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            decoration: BoxDecoration(
-                              color: mode == 'online' ? Colors.white : Colors.transparent,
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: mode == 'online' ? AppleTheme.softShadow : null,
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  CupertinoIcons.globe,
-                                  size: 16,
-                                  color: mode == 'online' ? AppleTheme.appleIndigo : AppleTheme.secondaryText,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'Online',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                    color: mode == 'online' ? AppleTheme.primaryText : AppleTheme.secondaryText,
-                                  ),
-                                ),
-                              ],
-                            ),
+                        child: Text(
+                          'Online Mode: Attendance will record your IP & device session.',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppleTheme.appleBlue,
                           ),
                         ),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              // 3. Live Geofence GPS Card / Online Mode Status Pill
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppleTheme.border),
-                  boxShadow: AppleTheme.softShadow,
-                ),
-                child: mode == 'online'
-                    ? Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE8F2FF),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: AppleTheme.appleBlue.withOpacity(0.2)),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(CupertinoIcons.info_circle_fill, color: AppleTheme.appleBlue, size: 18),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'ℹ️ Online Class: Attendance will be marked as Online',
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppleTheme.appleBlue,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                )
+              : Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Row(
                           children: [
@@ -1439,487 +1487,762 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 28),
+        ),
+        const SizedBox(height: 28),
 
-              // 4. Central Apple Pulsing Action Button (Punch In / Punch Out)
-              Center(
-                child: GestureDetector(
-                  onTap: loading ? null : _handleFingerprintTap,
-                  child: AnimatedBuilder(
-                    animation: _pulseController,
-                    builder: (context, child) {
-                      final scale = isPunchedIn ? 1.0 + (_pulseController.value * 0.05) : 1.0;
-                      return Transform.scale(
-                        scale: scale,
-                        child: Container(
-                          width: 180,
-                          height: 180,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: LinearGradient(
-                              colors: isPunchedIn
-                                  ? [AppleTheme.appleRose, const Color(0xFFFF6B63)]
-                                  : [AppleTheme.appleGreen, const Color(0xFF00C7BE)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: (isPunchedIn ? AppleTheme.appleRose : AppleTheme.appleGreen)
-                                    .withOpacity(0.35),
-                                blurRadius: 30,
-                                spreadRadius: isPunchedIn ? 4 : 0,
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                isPunchedIn ? CupertinoIcons.square_fill : Icons.fingerprint,
-                                color: Colors.white,
-                                size: 54,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                isPunchedIn ? 'PUNCH OUT' : 'PUNCH IN',
-                                style: GoogleFonts.inter(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w800,
-                                  color: Colors.white,
-                                  letterSpacing: 1.0,
-                                ),
-                              ),
-                              if (isPunchedIn) ...[
-                                const SizedBox(height: 4),
-                                Text(
-                                  _formatTimer(elapsedSeconds),
-                                  style: GoogleFonts.inter(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ],
-                            ],
+        // 4. Central Apple Pulsing Action Button (Punch In / Punch Out)
+        Center(
+          child: GestureDetector(
+            onTap: loading ? null : _handleFingerprintTap,
+            child: AnimatedBuilder(
+              animation: _pulseController,
+              builder: (context, child) {
+                final scale = isPunchedIn ? 1.0 + (_pulseController.value * 0.05) : 1.0;
+                return Transform.scale(
+                  scale: scale,
+                  child: Container(
+                    width: 180,
+                    height: 180,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: isPunchedIn
+                            ? [AppleTheme.appleRose, const Color(0xFFFF6B63)]
+                            : [AppleTheme.appleGreen, const Color(0xFF00C7BE)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: (isPunchedIn ? AppleTheme.appleRose : AppleTheme.appleGreen)
+                              .withOpacity(0.35),
+                          blurRadius: 30,
+                          spreadRadius: isPunchedIn ? 4 : 0,
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          isPunchedIn ? CupertinoIcons.square_fill : Icons.fingerprint,
+                          color: Colors.white,
+                          size: 54,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          isPunchedIn ? 'PUNCH OUT' : 'PUNCH IN',
+                          style: GoogleFonts.inter(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                            letterSpacing: 1.0,
                           ),
                         ),
-                      );
-                    },
+                        if (isPunchedIn) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            _formatTimer(elapsedSeconds),
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+        const SizedBox(height: 28),
+
+        // 5a. Today's Quick Data Grid (Today Only!)
+        Row(
+          children: [
+            Expanded(
+              child: _buildKpiCard(
+                title: "Today's Check-In",
+                value: todayFirstCheckInStr,
+                icon: CupertinoIcons.clock_fill,
+                iconColor: AppleTheme.appleGreen,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildKpiCard(
+                title: "Today's Check-Out",
+                value: todayLastCheckOutStr,
+                icon: CupertinoIcons.clock_fill,
+                iconColor: AppleTheme.appleBlue,
+              ),
+            ),
+          ],
+        ),
+
+        // ⭐ LEAVE A STUDENT REVIEW BANNER
+        const SizedBox(height: 12),
+        GestureDetector(
+          onTap: () async {
+            final url = Uri.parse('https://sudhirkr85.github.io/review/');
+            if (await canLaunchUrl(url)) {
+              await launchUrl(url, mode: LaunchMode.externalApplication);
+            }
+          },
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFFFF8E7), Color(0xFFFFE8B3)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFFF9500).withOpacity(0.4)),
+              boxShadow: AppleTheme.softShadow,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFF9500),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(CupertinoIcons.star_fill, color: Colors.white, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text('Leave Student Review', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: AppleTheme.primaryText)),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(color: const Color(0xFFFF9500), borderRadius: BorderRadius.circular(10)),
+                            child: Text('⭐ 5.0 Star', style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text('Share your feedback directly on our review portal', style: GoogleFonts.inter(fontSize: 11, color: AppleTheme.secondaryText)),
+                    ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 28),
+                const Icon(CupertinoIcons.arrow_up_right, color: Color(0xFFFF9500), size: 16),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
 
-              // 5. KPI Summary Cards Row
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildKpiCard(
-                      title: "Today's Check-In",
-                      value: todayFirstCheckInStr,
-                      icon: CupertinoIcons.clock,
-                      iconColor: AppleTheme.appleGreen,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildKpiCard(
-                      title: "Today's Check-Out",
-                      value: todayLastCheckOutStr,
-                      icon: CupertinoIcons.clock_fill,
-                      iconColor: AppleTheme.appleBlue,
-                    ),
-                  ),
-                ],
-              ),
-              // ⭐ LEAVE A STUDENT REVIEW BANNER
-              const SizedBox(height: 12),
-              GestureDetector(
+        // 5b. Quick Links Row (WhatsApp & Coding With Sudhir YouTube)
+        Row(
+          children: [
+            Expanded(
+              child: GestureDetector(
                 onTap: () async {
-                  final url = Uri.parse('https://sudhirkr85.github.io/review/');
+                  final url = Uri.parse('https://chat.whatsapp.com/IoJv1FFdbNNGsSUN52ZZdS');
                   if (await canLaunchUrl(url)) {
                     await launchUrl(url, mode: LaunchMode.externalApplication);
                   }
                 },
                 child: Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFFFF8E7), Color(0xFFFFE8B3)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFFF9500).withOpacity(0.4)),
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppleTheme.border),
                     boxShadow: AppleTheme.softShadow,
                   ),
                   child: Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFFF9500),
-                          shape: BoxShape.circle,
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE8F8EE),
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Icon(CupertinoIcons.star_fill, color: Colors.white, size: 20),
+                        child: const Icon(CupertinoIcons.chat_bubble_text_fill, color: AppleTheme.appleGreen, size: 18),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              children: [
-                                Text('Leave Student Review', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w800, color: AppleTheme.primaryText)),
-                                const SizedBox(width: 6),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(color: const Color(0xFFFF9500), borderRadius: BorderRadius.circular(10)),
-                                  child: Text('⭐ 5.0 Star', style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white)),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 2),
-                            Text('Share your feedback directly on our review portal', style: GoogleFonts.inter(fontSize: 11, color: AppleTheme.secondaryText)),
+                            Text('WhatsApp', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: AppleTheme.primaryText)),
+                            Text('Placement', style: GoogleFonts.inter(fontSize: 10, color: AppleTheme.secondaryText)),
                           ],
                         ),
                       ),
-                      const Icon(CupertinoIcons.arrow_up_right, color: Color(0xFFFF9500), size: 16),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
-
-              // 5b. Quick Links Row (WhatsApp & Coding With Sudhir YouTube)
-              Row(
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () async {
-                        final url = Uri.parse('https://chat.whatsapp.com/IoJv1FFdbNNGsSUN52ZZdS');
-                        if (await canLaunchUrl(url)) {
-                          await launchUrl(url, mode: LaunchMode.externalApplication);
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppleTheme.border),
-                          boxShadow: AppleTheme.softShadow,
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFE8F8EE),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Icon(CupertinoIcons.chat_bubble_text_fill, color: AppleTheme.appleGreen, size: 18),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('WhatsApp', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: AppleTheme.primaryText)),
-                                  Text('Placement', style: GoogleFonts.inter(fontSize: 10, color: AppleTheme.secondaryText)),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () async {
-                        final url = Uri.parse('https://www.youtube.com/@CodingWithSudhir');
-                        if (await canLaunchUrl(url)) {
-                          await launchUrl(url, mode: LaunchMode.externalApplication);
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppleTheme.border),
-                          boxShadow: AppleTheme.softShadow,
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFFF0F0),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Icon(CupertinoIcons.play_rectangle_fill, color: Color(0xFFFF0000), size: 18),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('YouTube', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: AppleTheme.primaryText)),
-                                  Text('CodingWithSudhir', style: GoogleFonts.inter(fontSize: 10, color: AppleTheme.secondaryText)),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-
-              // 5c. Social Hub Row (Instagram & LinkedIn)
-              Row(
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () async {
-                        final url = Uri.parse('https://www.instagram.com/sssamacademy');
-                        if (await canLaunchUrl(url)) {
-                          await launchUrl(url, mode: LaunchMode.externalApplication);
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppleTheme.border),
-                          boxShadow: AppleTheme.softShadow,
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFFF0F6),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Icon(CupertinoIcons.camera_fill, color: Color(0xFFE1306C), size: 18),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Instagram', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: AppleTheme.primaryText)),
-                                  Text('@sssamacademy', style: GoogleFonts.inter(fontSize: 10, color: AppleTheme.secondaryText)),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () async {
-                        final url = Uri.parse('https://www.linkedin.com/company/sssamacademy');
-                        if (await canLaunchUrl(url)) {
-                          await launchUrl(url, mode: LaunchMode.externalApplication);
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppleTheme.border),
-                          boxShadow: AppleTheme.softShadow,
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFE8F2FF),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Icon(CupertinoIcons.briefcase_fill, color: Color(0xFF0A66C2), size: 18),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('LinkedIn', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: AppleTheme.primaryText)),
-                                  Text('SSSAM Academy', style: GoogleFonts.inter(fontSize: 10, color: AppleTheme.secondaryText)),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-
-              // 6. Recent Attendance Log History Header
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'My Attendance History',
-                    style: GoogleFonts.inter(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: AppleTheme.primaryText,
-                    ),
-                  ),
-                  if (refreshingLogs)
-                    const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Attendance History Items
-              if (records.isEmpty)
-                Container(
-                  padding: const EdgeInsets.all(32),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: GestureDetector(
+                onTap: () async {
+                  final url = Uri.parse('https://www.youtube.com/@CodingWithSudhir');
+                  if (await canLaunchUrl(url)) {
+                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: AppleTheme.border),
+                    boxShadow: AppleTheme.softShadow,
                   ),
-                  child: Center(
-                    child: Text(
-                      'No attendance records found yet.',
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        color: AppleTheme.secondaryText,
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF0F0),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(CupertinoIcons.play_rectangle_fill, color: Color(0xFFFF0000), size: 18),
                       ),
-                    ),
-                  ),
-                )
-              else
-                ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: records.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
-                  itemBuilder: (context, index) {
-                    final item = records[index];
-                    final String formattedDate = DateFormat('EEE, d MMM yyyy').format(item.punchInTime);
-                    final String inTime = DateFormat('hh:mm a').format(item.punchInTime);
-                    final String outTime = item.punchOutTime != null
-                        ? DateFormat('hh:mm a').format(item.punchOutTime!)
-                        : 'Active Session';
-
-                    return Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppleTheme.border),
-                        boxShadow: AppleTheme.softShadow,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                formattedDate,
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppleTheme.primaryText,
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: item.status == 'active'
-                                      ? AppleTheme.appleGreen.withOpacity(0.1)
-                                      : const Color(0xFFF2F2F7),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  item.status == 'active' ? '● PUNCHED IN' : '${item.durationMinutes} Mins',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    color: item.status == 'active' ? AppleTheme.appleGreen : AppleTheme.secondaryText,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'In: $inTime   ➔   Out: $outTime',
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  color: AppleTheme.secondaryText,
-                                ),
-                              ),
-                              Text(
-                                item.classMode == 'online' || item.mode == 'online'
-                                    ? '💻 ONLINE'
-                                    : '🏫 OFFLINE',
-                                style: GoogleFonts.inter(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: item.classMode == 'online' || item.mode == 'online'
-                                      ? AppleTheme.appleBlue
-                                      : AppleTheme.appleGreen,
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (item.notes != null && item.notes!.isNotEmpty) ...[
-                            const SizedBox(height: 8),
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF9F9FB),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                '📝 Notes: ${item.notes}',
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  color: AppleTheme.primaryText,
-                                ),
-                              ),
-                            ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('YouTube', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: AppleTheme.primaryText)),
+                            Text('CodingWithSudhir', style: GoogleFonts.inter(fontSize: 10, color: AppleTheme.secondaryText)),
                           ],
-                        ],
+                        ),
                       ),
-                    );
-                  },
+                    ],
+                  ),
                 ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+
+        // 5c. Social Hub Row (Instagram & LinkedIn)
+        Row(
+          children: [
+            Expanded(
+              child: GestureDetector(
+                onTap: () async {
+                  final url = Uri.parse('https://www.instagram.com/sssamacademy');
+                  if (await canLaunchUrl(url)) {
+                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppleTheme.border),
+                    boxShadow: AppleTheme.softShadow,
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFF0F6),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(CupertinoIcons.camera_fill, color: Color(0xFFE1306C), size: 18),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Instagram', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: AppleTheme.primaryText)),
+                            Text('@sssamacademy', style: GoogleFonts.inter(fontSize: 10, color: AppleTheme.secondaryText)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: GestureDetector(
+                onTap: () async {
+                  final url = Uri.parse('https://www.linkedin.com/company/sssamacademy');
+                  if (await canLaunchUrl(url)) {
+                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppleTheme.border),
+                    boxShadow: AppleTheme.softShadow,
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE8F2FF),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(CupertinoIcons.briefcase_fill, color: Color(0xFF0A66C2), size: 18),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('LinkedIn', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: AppleTheme.primaryText)),
+                            Text('SSSAM Academy', style: GoogleFonts.inter(fontSize: 10, color: AppleTheme.secondaryText)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // TAB 1: CALENDAR & ATTENDANCE HISTORY
+  Widget _buildCalendarTabContent() {
+    final int totalSessions = records.length;
+    final int totalMins = records.fold(0, (sum, r) => sum + r.durationMinutes);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Attendance Stats Card
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppleTheme.border),
+            boxShadow: AppleTheme.softShadow,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              Column(
+                children: [
+                  Text('Total Sessions', style: GoogleFonts.inter(fontSize: 11, color: AppleTheme.secondaryText)),
+                  const SizedBox(height: 4),
+                  Text('$totalSessions', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w800, color: AppleTheme.primaryText)),
+                ],
+              ),
+              Container(width: 1, height: 30, color: AppleTheme.border),
+              Column(
+                children: [
+                  Text('Total Time Spent', style: GoogleFonts.inter(fontSize: 11, color: AppleTheme.secondaryText)),
+                  const SizedBox(height: 4),
+                  Text('${(totalMins / 60).toStringAsFixed(1)} Hours', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w800, color: AppleTheme.appleBlue)),
+                ],
+              ),
             ],
           ),
         ),
-      ),
+        const SizedBox(height: 18),
+
+        // Recent Attendance Log History Header
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'My Attendance History',
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: AppleTheme.primaryText,
+              ),
+            ),
+            if (refreshingLogs)
+              const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        // Attendance History Items
+        if (records.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppleTheme.border),
+            ),
+            child: Center(
+              child: Text(
+                'No attendance records found yet.',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: AppleTheme.secondaryText,
+                ),
+              ),
+            ),
+          )
+        else
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: records.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            itemBuilder: (context, index) {
+              final item = records[index];
+              final String formattedDate = DateFormat('EEE, d MMM yyyy').format(item.punchInTime);
+              final String inTime = DateFormat('hh:mm a').format(item.punchInTime);
+              final String outTime = item.punchOutTime != null
+                  ? DateFormat('hh:mm a').format(item.punchOutTime!)
+                  : 'Active Session';
+
+              return Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppleTheme.border),
+                  boxShadow: AppleTheme.softShadow,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          formattedDate,
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppleTheme.primaryText,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: item.status == 'active'
+                                ? AppleTheme.appleGreen.withOpacity(0.1)
+                                : const Color(0xFFF2F2F7),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            item.status == 'active' ? '● PUNCHED IN' : '${item.durationMinutes} Mins',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: item.status == 'active' ? AppleTheme.appleGreen : AppleTheme.secondaryText,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'In: $inTime   ➔   Out: $outTime',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: AppleTheme.secondaryText,
+                          ),
+                        ),
+                        Text(
+                          item.classMode == 'online' || item.mode == 'online'
+                              ? '💻 ONLINE'
+                              : '🏫 OFFLINE',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: item.classMode == 'online' || item.mode == 'online'
+                                ? AppleTheme.appleBlue
+                                : AppleTheme.appleGreen,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (item.notes != null && item.notes!.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF9F9FB),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '📝 Notes: ${item.notes}',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: AppleTheme.primaryText,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            },
+          ),
+      ],
+    );
+  }
+
+  // TAB 2: PROFILE & SETTINGS
+  Widget _buildProfileTabContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppleTheme.border),
+            boxShadow: AppleTheme.softShadow,
+          ),
+          child: Column(
+            children: [
+              CircleAvatar(
+                radius: 36,
+                backgroundColor: AppleTheme.appleGreen.withOpacity(0.12),
+                child: Text(
+                  currentUserState.name.isNotEmpty ? currentUserState.name[0].toUpperCase() : 'S',
+                  style: GoogleFonts.inter(fontSize: 32, fontWeight: FontWeight.w800, color: AppleTheme.appleGreen),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(currentUserState.name, style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w800, color: AppleTheme.primaryText)),
+              const SizedBox(height: 4),
+              Text(currentUserState.email, style: GoogleFonts.inter(fontSize: 13, color: AppleTheme.secondaryText)),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(color: const Color(0xFFF2F2F7), borderRadius: BorderRadius.circular(10)),
+                child: Text('Student ID: ${currentUserState.studentId}', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: AppleTheme.appleGreen)),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Edit Profile Button
+        SizedBox(
+          height: 48,
+          child: ElevatedButton.icon(
+            onPressed: _showEditProfileDialog,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppleTheme.appleBlue,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+            icon: const Icon(CupertinoIcons.pencil_circle_fill, color: Colors.white, size: 20),
+            label: Text('Edit Profile Details', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // Campus Info Card
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppleTheme.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('🏫 Campus Geofence Settings', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: AppleTheme.primaryText)),
+              const SizedBox(height: 6),
+              Text('Campus Radius: ${officeRadius}m', style: GoogleFonts.inter(fontSize: 12, color: AppleTheme.secondaryText)),
+              Text('Location: Sector 14, Old DLF, Gurugram', style: GoogleFonts.inter(fontSize: 12, color: AppleTheme.secondaryText)),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+
+        // Sign Out Button
+        SizedBox(
+          height: 48,
+          child: OutlinedButton.icon(
+            onPressed: widget.onLogout,
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: Color(0xFFFF3B30)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+            icon: const Icon(CupertinoIcons.square_arrow_right, color: Color(0xFFFF3B30), size: 18),
+            label: Text('Sign Out', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFFFF3B30))),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // TAB 3: SUPPORT & ESCALATION DESK
+  Widget _buildSupportTabContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Primary Support Line Card
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFF34C759).withOpacity(0.3)),
+            boxShadow: AppleTheme.softShadow,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(color: const Color(0xFFE8F8EE), borderRadius: BorderRadius.circular(10)),
+                    child: const Icon(CupertinoIcons.phone_fill, color: AppleTheme.appleGreen, size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Primary Support Line', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: AppleTheme.primaryText)),
+                      Text('Standard Help & Student Queries', style: GoogleFonts.inter(fontSize: 11, color: AppleTheme.secondaryText)),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text('+91 9517447689  /  +91 9217031899', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: AppleTheme.appleGreen)),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    final url = Uri.parse('tel:+919517447689');
+                    if (await canLaunchUrl(url)) await launchUrl(url);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppleTheme.appleGreen,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  icon: const Icon(CupertinoIcons.phone, color: Colors.white, size: 16),
+                  label: Text('Contact Primary Support', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        // High Authority Escalation Card
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFFFF3B30).withOpacity(0.3)),
+            boxShadow: AppleTheme.softShadow,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(color: const Color(0xFFFFF0F0), borderRadius: BorderRadius.circular(10)),
+                    child: const Icon(CupertinoIcons.exclamationmark_triangle_fill, color: Color(0xFFFF3B30), size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('High Authority Escalation', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w800, color: AppleTheme.primaryText)),
+                        Text('Priority Review for Unresolved Issues', style: GoogleFonts.inter(fontSize: 11, color: AppleTheme.secondaryText)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _showHighAuthorityEscalationDialog,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF3B30),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  icon: const Icon(CupertinoIcons.shield_fill, color: Colors.white, size: 16),
+                  label: Text('Submit Escalation Request', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        // Placement Group Card
+        GestureDetector(
+          onTap: () async {
+            final url = Uri.parse('https://chat.whatsapp.com/IoJv1FFdbNNGsSUN52ZZdS');
+            if (await canLaunchUrl(url)) await launchUrl(url, mode: LaunchMode.externalApplication);
+          },
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppleTheme.border),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(color: const Color(0xFFE8F2FF), borderRadius: BorderRadius.circular(12)),
+                  child: const Icon(CupertinoIcons.chat_bubble_2_fill, color: AppleTheme.appleBlue, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Official WhatsApp Group', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: AppleTheme.primaryText)),
+                      Text('Join SSSAM Placement Community', style: GoogleFonts.inter(fontSize: 11, color: AppleTheme.secondaryText)),
+                    ],
+                  ),
+                ),
+                const Icon(CupertinoIcons.arrow_up_right, color: AppleTheme.appleBlue, size: 16),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 

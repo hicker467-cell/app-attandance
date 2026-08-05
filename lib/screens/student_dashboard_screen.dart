@@ -29,6 +29,12 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
   late UserModel currentUserState;
   String mode = 'location'; // 'location' (offline) | 'online'
   int _selectedTabIndex = 0;
+  DateTime _calendarSelectedMonth = DateTime.now();
+  late TextEditingController _profileNameController;
+  late TextEditingController _profilePhoneController;
+  bool _isSavingProfileInline = false;
+  String? _profileInlineError;
+
   Position? currentPosition;
   int? distFromOffice;
   bool refreshingGps = false;
@@ -54,6 +60,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
   void initState() {
     super.initState();
     currentUserState = widget.currentUser;
+    _profileNameController = TextEditingController(text: widget.currentUser.name);
+    _profilePhoneController = TextEditingController(text: widget.currentUser.phone ?? '');
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
@@ -66,6 +74,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
   void dispose() {
     timer?.cancel();
     liveSyncTimer?.cancel();
+    _profileNameController.dispose();
+    _profilePhoneController.dispose();
     _pulseController.dispose();
     super.dispose();
   }
@@ -1824,17 +1834,48 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
     );
   }
 
+  Widget _buildSmallMetricCard(String label, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppleTheme.border),
+        boxShadow: AppleTheme.softShadow,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(label, style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w800, color: AppleTheme.secondaryText)),
+          const SizedBox(height: 2),
+          Text(value, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w900, color: color)),
+        ],
+      ),
+    );
+  }
+
   // TAB 1: CALENDAR & ATTENDANCE HISTORY
   Widget _buildCalendarTabContent() {
-    final int totalSessions = records.length;
-    final int totalMins = records.fold(0, (sum, r) => sum + r.durationMinutes);
+    final String monthYearStr = DateFormat('MMMM yyyy').format(_calendarSelectedMonth);
+    
+    // Filter records for selected month
+    final filteredRecords = records.where((r) {
+      return r.punchInTime.year == _calendarSelectedMonth.year && r.punchInTime.month == _calendarSelectedMonth.month;
+    }).toList();
+
+    final int presentDays = filteredRecords.map((r) => DateFormat('yyyy-MM-dd').format(r.punchInTime)).toSet().length;
+    final int sessionsCount = filteredRecords.length;
+    final int totalMins = filteredRecords.fold(0, (sum, r) => sum + r.durationMinutes);
+    final double totalHours = totalMins / 60.0;
+    final double avgHours = presentDays > 0 ? (totalHours / presentDays) : 0.0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Attendance Stats Card
+        // 1. Month Selector Header Bar (Prev, Title, Next)
         Container(
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
@@ -1842,52 +1883,75 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
             boxShadow: AppleTheme.softShadow,
           ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              IconButton(
+                onPressed: () {
+                  setState(() {
+                    _calendarSelectedMonth = DateTime(_calendarSelectedMonth.year, _calendarSelectedMonth.month - 1);
+                  });
+                },
+                icon: const Icon(CupertinoIcons.chevron_left_circle_fill, color: AppleTheme.appleBlue, size: 28),
+                tooltip: 'Previous Month',
+              ),
               Column(
                 children: [
-                  Text('Total Sessions', style: GoogleFonts.inter(fontSize: 11, color: AppleTheme.secondaryText)),
-                  const SizedBox(height: 4),
-                  Text('$totalSessions', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w800, color: AppleTheme.primaryText)),
+                  Text(
+                    monthYearStr,
+                    style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: AppleTheme.primaryText),
+                  ),
+                  Text(
+                    'Monthly Attendance Summary',
+                    style: GoogleFonts.inter(fontSize: 10, color: AppleTheme.secondaryText),
+                  ),
                 ],
               ),
-              Container(width: 1, height: 30, color: AppleTheme.border),
-              Column(
-                children: [
-                  Text('Total Time Spent', style: GoogleFonts.inter(fontSize: 11, color: AppleTheme.secondaryText)),
-                  const SizedBox(height: 4),
-                  Text('${(totalMins / 60).toStringAsFixed(1)} Hours', style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w800, color: AppleTheme.appleBlue)),
-                ],
+              IconButton(
+                onPressed: () {
+                  setState(() {
+                    _calendarSelectedMonth = DateTime(_calendarSelectedMonth.year, _calendarSelectedMonth.month + 1);
+                  });
+                },
+                icon: const Icon(CupertinoIcons.chevron_right_circle_fill, color: AppleTheme.appleBlue, size: 28),
+                tooltip: 'Next Month',
               ),
             ],
           ),
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 16),
 
-        // Recent Attendance Log History Header
+        // 2. Summary Metrics Grid
+        GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          childAspectRatio: 2.2,
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+          children: [
+            _buildSmallMetricCard('PRESENT DAYS', '$presentDays Days', AppleTheme.appleGreen),
+            _buildSmallMetricCard('SESSIONS ATTENDED', '$sessionsCount Sessions', AppleTheme.appleBlue),
+            _buildSmallMetricCard('TOTAL HOURS', '${totalHours.toStringAsFixed(1)} Hrs', const Color(0xFF30B0C7)),
+            _buildSmallMetricCard('AVG HOURS / DAY', '${avgHours.toStringAsFixed(1)} Hrs', const Color(0xFFFF9500)),
+          ],
+        ),
+        const SizedBox(height: 20),
+
+        // 3. Attendance History Logs List
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'My Attendance History',
-              style: GoogleFonts.inter(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: AppleTheme.primaryText,
-              ),
+              'Attendance Logs ($monthYearStr)',
+              style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700, color: AppleTheme.primaryText),
             ),
             if (refreshingLogs)
-              const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
+              const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
           ],
         ),
         const SizedBox(height: 12),
 
-        // Attendance History Items
-        if (records.isEmpty)
+        if (filteredRecords.isEmpty)
           Container(
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
@@ -1897,11 +1961,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
             ),
             child: Center(
               child: Text(
-                'No attendance records found yet.',
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  color: AppleTheme.secondaryText,
-                ),
+                'No attendance records found for $monthYearStr.',
+                style: GoogleFonts.inter(fontSize: 13, color: AppleTheme.secondaryText),
               ),
             ),
           )
@@ -1909,10 +1970,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
           ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: records.length,
+            itemCount: filteredRecords.length,
             separatorBuilder: (_, __) => const SizedBox(height: 10),
             itemBuilder: (context, index) {
-              final item = records[index];
+              final item = filteredRecords[index];
               final String formattedDate = DateFormat('EEE, d MMM yyyy').format(item.punchInTime);
               final String inTime = DateFormat('hh:mm a').format(item.punchInTime);
               final String outTime = item.punchOutTime != null
@@ -1933,29 +1994,16 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          formattedDate,
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: AppleTheme.primaryText,
-                          ),
-                        ),
+                        Text(formattedDate, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: AppleTheme.primaryText)),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: item.status == 'active'
-                                ? AppleTheme.appleGreen.withOpacity(0.1)
-                                : const Color(0xFFF2F2F7),
+                            color: item.status == 'active' ? AppleTheme.appleGreen.withOpacity(0.1) : const Color(0xFFF2F2F7),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             item.status == 'active' ? '● PUNCHED IN' : '${item.durationMinutes} Mins',
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: item.status == 'active' ? AppleTheme.appleGreen : AppleTheme.secondaryText,
-                            ),
+                            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: item.status == 'active' ? AppleTheme.appleGreen : AppleTheme.secondaryText),
                           ),
                         ),
                       ],
@@ -1964,24 +2012,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
+                        Text('In: $inTime   ➔   Out: $outTime', style: GoogleFonts.inter(fontSize: 12, color: AppleTheme.secondaryText)),
                         Text(
-                          'In: $inTime   ➔   Out: $outTime',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: AppleTheme.secondaryText,
-                          ),
-                        ),
-                        Text(
-                          item.classMode == 'online' || item.mode == 'online'
-                              ? '💻 ONLINE'
-                              : '🏫 OFFLINE',
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: item.classMode == 'online' || item.mode == 'online'
-                                ? AppleTheme.appleBlue
-                                : AppleTheme.appleGreen,
-                          ),
+                          item.classMode == 'online' || item.mode == 'online' ? '💻 ONLINE' : '🏫 OFFLINE',
+                          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: item.classMode == 'online' || item.mode == 'online' ? AppleTheme.appleBlue : AppleTheme.appleGreen),
                         ),
                       ],
                     ),
@@ -1989,17 +2023,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
                       const SizedBox(height: 8),
                       Container(
                         padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF9F9FB),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          '📝 Notes: ${item.notes}',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: AppleTheme.primaryText,
-                          ),
-                        ),
+                        decoration: BoxDecoration(color: const Color(0xFFF9F9FB), borderRadius: BorderRadius.circular(10)),
+                        child: Text('📝 Notes: ${item.notes}', style: GoogleFonts.inter(fontSize: 12, color: AppleTheme.primaryText)),
                       ),
                     ],
                   ],
@@ -2016,6 +2041,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // 1. Profile Avatar Header Card with Camera Overlay
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
@@ -2026,45 +2052,183 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
           ),
           child: Column(
             children: [
-              CircleAvatar(
-                radius: 36,
-                backgroundColor: AppleTheme.appleGreen.withOpacity(0.12),
-                child: Text(
-                  currentUserState.name.isNotEmpty ? currentUserState.name[0].toUpperCase() : 'S',
-                  style: GoogleFonts.inter(fontSize: 32, fontWeight: FontWeight.w800, color: AppleTheme.appleGreen),
-                ),
+              Stack(
+                alignment: Alignment.bottomRight,
+                children: [
+                  GestureDetector(
+                    onTap: _showFullImageDialog,
+                    child: CircleAvatar(
+                      radius: 40,
+                      backgroundColor: AppleTheme.appleGreen.withOpacity(0.12),
+                      child: Text(
+                        currentUserState.name.isNotEmpty ? currentUserState.name[0].toUpperCase() : 'S',
+                        style: GoogleFonts.inter(fontSize: 36, fontWeight: FontWeight.w800, color: AppleTheme.appleGreen),
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: _showEditProfileDialog,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: const BoxDecoration(
+                        color: AppleTheme.appleBlue,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(CupertinoIcons.camera_fill, color: Colors.white, size: 14),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
               Text(currentUserState.name, style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w800, color: AppleTheme.primaryText)),
               const SizedBox(height: 4),
-              Text(currentUserState.email, style: GoogleFonts.inter(fontSize: 13, color: AppleTheme.secondaryText)),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(color: const Color(0xFFF2F2F7), borderRadius: BorderRadius.circular(10)),
-                child: Text('Student ID: ${currentUserState.studentId}', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: AppleTheme.appleGreen)),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(color: const Color(0xFFE8F8EE), borderRadius: BorderRadius.circular(10)),
+                    child: Text('Student ID: ${currentUserState.studentId}', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: AppleTheme.appleGreen)),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(color: const Color(0xFFE8F2FF), borderRadius: BorderRadius.circular(10)),
+                    child: Text('Active Student', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: AppleTheme.appleBlue)),
+                  ),
+                ],
               ),
             ],
           ),
         ),
         const SizedBox(height: 16),
 
-        // Edit Profile Button
-        SizedBox(
-          height: 48,
-          child: ElevatedButton.icon(
-            onPressed: _showEditProfileDialog,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppleTheme.appleBlue,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            ),
-            icon: const Icon(CupertinoIcons.pencil_circle_fill, color: Colors.white, size: 20),
-            label: Text('Edit Profile Details', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
+        // 2. Inline Profile Details Edit Card (Name & Phone)
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppleTheme.border),
+            boxShadow: AppleTheme.softShadow,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('✏️ Edit Profile Details', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800, color: AppleTheme.primaryText)),
+                  const Icon(CupertinoIcons.person_crop_circle_badge_checkmark, color: AppleTheme.appleBlue, size: 20),
+                ],
+              ),
+              const SizedBox(height: 14),
+              if (_profileInlineError != null) ...[
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(color: const Color(0xFFFFF0F0), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFFF3B30).withOpacity(0.3))),
+                  child: Text(_profileInlineError!, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFFFF3B30))),
+                ),
+                const SizedBox(height: 12),
+              ],
+              Text('Full Name *', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: AppleTheme.primaryText)),
+              const SizedBox(height: 6),
+              TextField(
+                controller: _profileNameController,
+                decoration: InputDecoration(
+                  hintText: 'Enter full name',
+                  filled: true,
+                  fillColor: const Color(0xFFF5F5F7),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text('10-Digit Mobile Number *', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: AppleTheme.primaryText)),
+              const SizedBox(height: 6),
+              TextField(
+                controller: _profilePhoneController,
+                keyboardType: TextInputType.phone,
+                decoration: InputDecoration(
+                  hintText: 'Enter 10-digit mobile number',
+                  filled: true,
+                  fillColor: const Color(0xFFF5F5F7),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text('Registered Email', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: AppleTheme.secondaryText)),
+              const SizedBox(height: 6),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(color: const Color(0xFFF2F2F7), borderRadius: BorderRadius.circular(12)),
+                child: Text(currentUserState.email, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: AppleTheme.secondaryText)),
+              ),
+              const SizedBox(height: 18),
+              SizedBox(
+                width: double.infinity,
+                height: 46,
+                child: ElevatedButton.icon(
+                  onPressed: _isSavingProfileInline
+                      ? null
+                      : () async {
+                          final name = _profileNameController.text.trim();
+                          final phone = _profilePhoneController.text.trim();
+                          if (name.isEmpty) {
+                            setState(() => _profileInlineError = 'Full Name is required.');
+                            return;
+                          }
+                          if (phone.isNotEmpty && phone.length != 10) {
+                            setState(() => _profileInlineError = 'Mobile Number must be exactly 10 digits.');
+                            return;
+                          }
+                          setState(() {
+                            _isSavingProfileInline = true;
+                            _profileInlineError = null;
+                          });
+                          try {
+                            final updatedUser = await ApiService.updateProfile(
+                              studentId: currentUserState.studentId,
+                              name: name,
+                              email: currentUserState.email,
+                              phone: phone,
+                            );
+                            if (mounted) {
+                              setState(() {
+                                currentUserState = updatedUser;
+                                _isSavingProfileInline = false;
+                              });
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('🎉 Profile details saved successfully!')),
+                              );
+                            }
+                          } catch (err) {
+                            if (mounted) {
+                              setState(() {
+                                _isSavingProfileInline = false;
+                                _profileInlineError = err.toString().replaceAll('Exception: ', '');
+                              });
+                            }
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppleTheme.appleBlue,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  icon: _isSavingProfileInline
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Icon(CupertinoIcons.checkmark_seal_fill, color: Colors.white, size: 18),
+                  label: Text('Save Profile Changes', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white)),
+                ),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
 
-        // Campus Info Card
+        // 3. Campus Info Card
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -2084,7 +2248,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
         ),
         const SizedBox(height: 24),
 
-        // Sign Out Button
+        // 4. Sign Out Button
         SizedBox(
           height: 48,
           child: OutlinedButton.icon(

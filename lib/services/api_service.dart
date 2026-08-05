@@ -239,4 +239,37 @@ class ApiService {
       );
     } catch (_) {}
   }
+
+  // 12. Update Student Profile Details
+  static Future<UserModel> updateProfile({
+    required String studentId,
+    required String email,
+    required String name,
+    required String phone,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/auth'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'action': 'update-profile',
+        'studentId': studentId,
+        'email': email,
+        'name': name,
+        'phone': phone,
+      }),
+    );
+
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200 && data['success'] == true) {
+      return UserModel(
+        studentId: studentId,
+        name: name,
+        email: email,
+        role: 'student',
+        phone: phone,
+      );
+    } else {
+      throw Exception(data['error'] ?? 'Failed to update profile.');
+    }
+  }
 }

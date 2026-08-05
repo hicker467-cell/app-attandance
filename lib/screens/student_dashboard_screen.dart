@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/user_model.dart';
 import '../models/attendance_model.dart';
 import '../services/api_service.dart';
@@ -25,6 +26,7 @@ class StudentDashboardScreen extends StatefulWidget {
 }
 
 class _StudentDashboardScreenState extends State<StudentDashboardScreen> with SingleTickerProviderStateMixin {
+  late UserModel currentUserState;
   String mode = 'location'; // 'location' (offline) | 'online'
   Position? currentPosition;
   int? distFromOffice;
@@ -50,6 +52,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
   @override
   void initState() {
     super.initState();
+    currentUserState = widget.currentUser;
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
@@ -234,6 +237,323 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
         if (mounted) setState(() => loading = false);
       }
     }
+  }
+
+  void _showEditProfileDialog() {
+    final nameController = TextEditingController(text: currentUserState.name);
+    final phoneController = TextEditingController(text: currentUserState.phone);
+    bool isSaving = false;
+    String? errorMsg;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return Dialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '✏️ Edit Profile Details',
+                        style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w800),
+                      ),
+                      IconButton(
+                        icon: const Icon(CupertinoIcons.xmark_circle_fill, color: AppleTheme.secondaryText),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  if (errorMsg != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF0F0),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFFF3B30).withOpacity(0.3)),
+                      ),
+                      child: Text(
+                        errorMsg!,
+                        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFFFF3B30)),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  Text('Full Name *', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 4),
+                  TextField(
+                    controller: nameController,
+                    decoration: InputDecoration(
+                      hintText: 'Enter full name',
+                      filled: true,
+                      fillColor: const Color(0xFFF5F5F7),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Text('10-Digit Mobile Number *', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 4),
+                  TextField(
+                    controller: phoneController,
+                    keyboardType: TextInputType.phone,
+                    decoration: InputDecoration(
+                      hintText: 'Enter 10-digit mobile number',
+                      filled: true,
+                      fillColor: const Color(0xFFF5F5F7),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: isSaving
+                          ? null
+                          : () async {
+                              final name = nameController.text.trim();
+                              final phone = phoneController.text.trim();
+                              if (name.isEmpty) {
+                                setDialogState(() => errorMsg = 'Please enter your full name.');
+                                return;
+                              }
+                              if (phone.replaceAll(RegExp(r'\D'), '').length != 10) {
+                                setDialogState(() => errorMsg = 'Please enter a valid 10-digit mobile number.');
+                                return;
+                              }
+
+                              setDialogState(() {
+                                isSaving = true;
+                                errorMsg = null;
+                              });
+
+                              try {
+                                final updated = await ApiService.updateProfile(
+                                  studentId: currentUserState.studentId,
+                                  email: currentUserState.email,
+                                  name: name,
+                                  phone: phone,
+                                );
+                                if (!mounted) return;
+                                Navigator.pop(ctx);
+                                setState(() {
+                                  currentUserState = updated;
+                                });
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Profile details saved successfully!')),
+                                );
+                              } catch (e) {
+                                setDialogState(() {
+                                  isSaving = false;
+                                  errorMsg = e.toString().replaceAll('Exception: ', '');
+                                });
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppleTheme.appleGreen,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      child: isSaving
+                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : Text('💾 Save Profile Details', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showHighAuthorityEscalationDialog() {
+    final issueController = TextEditingController();
+    final discussionController = TextEditingController();
+    String? errorMsg;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return Dialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(color: Color(0xFFFFF0F0), shape: BoxShape.circle),
+                        child: const Text('🚨', style: TextStyle(fontSize: 18)),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('High Authority Escalation', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w800)),
+                            Text('Priority Line (9102130956)', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: AppleTheme.appleRose)),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(CupertinoIcons.xmark_circle_fill, color: AppleTheme.secondaryText),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF0F0),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFFF3B30).withOpacity(0.3)),
+                    ),
+                    child: Text(
+                      '⚠️ IMPORTANT: Kripya is number par tabhi contact karein agar aapka issue 9217031899 (Primary Help Line) par solve NAHI hua ho. Ye High Authority line hai.',
+                      style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: AppleTheme.primaryText, height: 1.3),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (errorMsg != null) ...[
+                    Text(errorMsg!, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: AppleTheme.appleRose)),
+                    const SizedBox(height: 8),
+                  ],
+                  Text('1. Kya issue tha? *', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 4),
+                  TextField(
+                    controller: issueController,
+                    maxLines: 2,
+                    decoration: InputDecoration(
+                      hintText: 'Describe your issue details...',
+                      filled: true,
+                      fillColor: const Color(0xFFF5F5F7),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text('2. 92 wale number par kya discuss hua? *', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 4),
+                  TextField(
+                    controller: discussionController,
+                    maxLines: 2,
+                    decoration: InputDecoration(
+                      hintText: 'Describe response from 92 line...',
+                      filled: true,
+                      fillColor: const Color(0xFFF5F5F7),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  SizedBox(
+                    height: 46,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        final issue = issueController.text.trim();
+                        final disc = discussionController.text.trim();
+                        if (issue.isEmpty || disc.isEmpty) {
+                          setDialogState(() => errorMsg = 'Please fill in both fields before proceeding.');
+                          return;
+                        }
+                        final text = '🚨 High Authority Escalation Ticket:\n👤 Name: ${currentUserState.name}\n📞 Contact: ${currentUserState.phone}\n❗ Issue Details: $issue\n💬 Discussed on 92 Line: $disc';
+                        final url = Uri.parse('https://wa.me/919102130956?text=${Uri.encodeComponent(text)}');
+                        Navigator.pop(ctx);
+                        if (await canLaunchUrl(url)) {
+                          await launchUrl(url, mode: LaunchMode.externalApplication);
+                        }
+                      },
+                      icon: const Icon(CupertinoIcons.chat_bubble_2_fill, size: 16),
+                      label: const Text('Proceed to High Authority'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppleTheme.appleRose,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showSupportOptionsDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('🎧 Student Support Lines', style: GoogleFonts.inter(fontSize: 17, fontWeight: FontWeight.w800)),
+                  IconButton(
+                    icon: const Icon(CupertinoIcons.xmark_circle_fill, color: AppleTheme.secondaryText),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  final text = 'Student Support Ticket:\n👤 Name: ${currentUserState.name}\n📞 Contact: ${currentUserState.phone}';
+                  final url = Uri.parse('https://wa.me/919217031899?text=${Uri.encodeComponent(text)}');
+                  if (await canLaunchUrl(url)) {
+                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                  }
+                },
+                icon: const Icon(CupertinoIcons.phone_fill, size: 18),
+                label: const Text('🟢 Primary Help & Support (92 Line)'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppleTheme.appleGreen,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _showHighAuthorityEscalationDialog();
+                },
+                icon: const Icon(CupertinoIcons.exclamationmark_shield_fill, color: AppleTheme.appleRose, size: 18),
+                label: Text('🚨 Priority Escalation Line (91 Line)', style: GoogleFonts.inter(color: AppleTheme.appleRose, fontWeight: FontWeight.w700)),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  side: const BorderSide(color: AppleTheme.appleRose),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _showOutsideOfficeRangeDialog() {
@@ -514,6 +834,29 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
                         color: AppleTheme.secondaryText,
                       ),
                     ),
+                    if (activeSession?.classMode == 'online' || activeSession?.mode == 'online') ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE8F2FF),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: AppleTheme.appleBlue.withOpacity(0.3)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(CupertinoIcons.globe, color: AppleTheme.appleBlue, size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                '💻 Online Logout: Your exact logout timestamp will be saved and visible to Admin.',
+                                style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppleTheme.appleBlue),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     Container(
                       decoration: BoxDecoration(
@@ -656,6 +999,16 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
         ),
         actions: [
           IconButton(
+            icon: const Icon(CupertinoIcons.pencil_circle_fill, color: AppleTheme.appleBlue),
+            onPressed: _showEditProfileDialog,
+            tooltip: 'Edit Profile',
+          ),
+          IconButton(
+            icon: const Icon(CupertinoIcons.phone_circle_fill, color: AppleTheme.appleGreen),
+            onPressed: _showSupportOptionsDialog,
+            tooltip: 'Support Lines',
+          ),
+          IconButton(
             icon: const Icon(CupertinoIcons.square_arrow_right, color: AppleTheme.appleRose),
             onPressed: widget.onLogout,
             tooltip: 'Sign Out',
@@ -688,8 +1041,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
                         radius: 26,
                         backgroundColor: AppleTheme.appleGreen.withOpacity(0.12),
                         child: Text(
-                          widget.currentUser.name.isNotEmpty
-                              ? widget.currentUser.name[0].toUpperCase()
+                          currentUserState.name.isNotEmpty
+                              ? currentUserState.name[0].toUpperCase()
                               : 'S',
                           style: GoogleFonts.inter(
                             fontSize: 22,
@@ -704,13 +1057,36 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            widget.currentUser.name,
-                            style: GoogleFonts.inter(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              color: AppleTheme.primaryText,
-                            ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                currentUserState.name,
+                                style: GoogleFonts.inter(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppleTheme.primaryText,
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: _showEditProfileDialog,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: AppleTheme.appleBlue.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    '✏️ Edit',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppleTheme.appleBlue,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 2),
                           Row(
@@ -722,7 +1098,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
-                                  widget.currentUser.studentId,
+                                  currentUserState.studentId,
                                   style: GoogleFonts.inter(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w700,
@@ -733,7 +1109,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  widget.currentUser.email,
+                                  currentUserState.email,
                                   overflow: TextOverflow.ellipsis,
                                   style: GoogleFonts.inter(
                                     fontSize: 12,

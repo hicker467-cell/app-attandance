@@ -1587,7 +1587,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> with Si
                   Expanded(
                     child: GestureDetector(
                       onTap: () async {
-                        final url = Uri.parse('https://www.youtube.com/@codingwithsudhir');
+                        final url = Uri.parse('https://www.youtube.com/@CodingWithSudhir');
                         if (await canLaunchUrl(url)) {
                           await launchUrl(url, mode: LaunchMode.externalApplication);
                         }
